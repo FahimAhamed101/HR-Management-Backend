@@ -7,6 +7,7 @@ import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/authRoutes';
 import employeeRoutes from './routes/employeeRoutes';
 import attendanceRoutes from './routes/attendanceRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { authenticate } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { AppError } from './utils/AppError';
@@ -28,6 +29,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/auth', authRoutes);
 app.use('/employees', authenticate, employeeRoutes);
 app.use('/attendance', authenticate, attendanceRoutes);
+app.use('/reports', authenticate, reportRoutes);
 
 app.use((req, _res, next) => {
   next(new AppError(`Not found: ${req.method} ${req.path}`, 404));

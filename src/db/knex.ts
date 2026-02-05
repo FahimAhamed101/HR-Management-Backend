@@ -10,5 +10,10 @@ export const db = knex({
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
   },
-  pool: { min: 2, max: 10 },
+  pool: {
+    min: env.DB_POOL_MIN,
+    max: env.DB_POOL_MAX,
+    idleTimeoutMillis: env.DB_POOL_IDLE_MS,
+    acquireTimeoutMillis: env.DB_POOL_ACQUIRE_MS,
+  },
 });

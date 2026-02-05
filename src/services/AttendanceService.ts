@@ -28,19 +28,64 @@ export class AttendanceService {
     return new Date(checkInValue);
   }
 
-  async getAll(filters?: { employee_id?: number; date?: string }) {
-    const query = db('attendance').select('*').orderBy('id', 'desc');
+  async getAll(filters?: {
+    employee_id?: number;
+    date?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, filters?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, filters?.limit ?? 10));
+    const offset = (page - 1) * limit;
+
+    const query = db('attendance')
+      .join('employees', 'attendance.employee_id', 'employees.id')
+      .whereNull('employees.deleted_at');
+
     if (filters?.employee_id) {
-      query.where({ employee_id: filters.employee_id });
+      query.where('attendance.employee_id', filters.employee_id);
     }
+
     if (filters?.date) {
-      query.where({ date: filters.date });
+      query.where('attendance.date', filters.date);
+    } else if (filters?.from && filters?.to) {
+      query.whereBetween('attendance.date', [filters.from, filters.to]);
+    } else if (filters?.from) {
+      query.where('attendance.date', '>=', filters.from);
+    } else if (filters?.to) {
+      query.where('attendance.date', '<=', filters.to);
     }
-    return query;
+
+    const countResult = await query.clone().count<{ count: string }[]>('* as count');
+    const total = Number(countResult[0]?.count ?? 0);
+
+    const data = await query
+      .clone()
+      .select('attendance.*')
+      .orderBy('attendance.id', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getById(id: number) {
-    const record = await db('attendance').where({ id }).first();
+    const record = await db('attendance')
+      .join('employees', 'attendance.employee_id', 'employees.id')
+      .whereNull('employees.deleted_at')
+      .where('attendance.id', id)
+      .select('attendance.*')
+      .first();
     if (!record) {
       throw new AppError('Attendance record not found', 404);
     }
@@ -48,7 +93,10 @@ export class AttendanceService {
   }
 
   async create(payload: AttendancePayload) {
-    const employee = await db('employees').where({ id: payload.employee_id }).first();
+    const employee = await db('employees')
+      .where({ id: payload.employee_id })
+      .whereNull('deleted_at')
+      .first();
     if (!employee) {
       throw new AppError('Employee not found', 404);
     }
@@ -58,20 +106,43 @@ export class AttendanceService {
       check_in_time: this.normalizeCheckInTime(payload.date as string | Date, payload.check_in_time),
     };
 
-    let id: number;
     if (env.DB_CLIENT === 'pg') {
-      const [row] = await db('attendance').insert(normalizedPayload).returning(['id']);
-      id = typeof row === 'object' ? row.id : row;
-    } else {
-      const result = await db('attendance').insert(normalizedPayload);
-      id = Array.isArray(result) ? result[0] : (result as number);
+      const [row] = await db('attendance')
+        .insert(normalizedPayload)
+        .onConflict(['employee_id', 'date'])
+        .merge({ check_in_time: normalizedPayload.check_in_time })
+        .returning(['id']);
+
+      const id = typeof row === 'object' ? row.id : row;
+      return this.getById(id);
     }
 
+    const existing = await db('attendance')
+      .where({
+        employee_id: normalizedPayload.employee_id,
+        date: normalizedPayload.date,
+      })
+      .first();
+
+    if (existing) {
+      await db('attendance')
+        .where({ id: existing.id })
+        .update({ check_in_time: normalizedPayload.check_in_time });
+      return this.getById(existing.id);
+    }
+
+    const result = await db('attendance').insert(normalizedPayload);
+    const id = Array.isArray(result) ? result[0] : (result as number);
     return this.getById(id);
   }
 
   async update(id: number, payload: AttendancePayload) {
-    const exists = await db('attendance').where({ id }).first();
+    const exists = await db('attendance')
+      .join('employees', 'attendance.employee_id', 'employees.id')
+      .whereNull('employees.deleted_at')
+      .where('attendance.id', id)
+      .select('attendance.*')
+      .first();
     if (!exists) {
       throw new AppError('Attendance record not found', 404);
     }
@@ -89,7 +160,12 @@ export class AttendanceService {
   }
 
   async delete(id: number) {
-    const exists = await db('attendance').where({ id }).first();
+    const exists = await db('attendance')
+      .join('employees', 'attendance.employee_id', 'employees.id')
+      .whereNull('employees.deleted_at')
+      .where('attendance.id', id)
+      .select('attendance.*')
+      .first();
     if (!exists) {
       throw new AppError('Attendance record not found', 404);
     }

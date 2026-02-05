@@ -5,8 +5,13 @@ import { asyncHandler } from '../middleware/asyncHandler';
 export class EmployeeController {
   private service = new EmployeeService();
 
-  getAll = asyncHandler(async (_req: Request, res: Response) => {
-    const employees = await this.service.getAll();
+  getAll = asyncHandler(async (req: Request, res: Response) => {
+    const pageRaw = req.query.page ? Number(req.query.page) : undefined;
+    const limitRaw = req.query.limit ? Number(req.query.limit) : undefined;
+    const page = Number.isFinite(pageRaw) ? pageRaw : undefined;
+    const limit = Number.isFinite(limitRaw) ? limitRaw : undefined;
+    const search = req.query.search ? String(req.query.search) : undefined;
+    const employees = await this.service.getAll({ page, limit, search });
     res.json(employees);
   });
 

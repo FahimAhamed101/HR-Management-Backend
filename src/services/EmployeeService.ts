@@ -13,12 +13,45 @@ export interface EmployeePayload {
 }
 
 export class EmployeeService {
-  async getAll() {
-    return db('employees').select('*').orderBy('id', 'desc');
+  private baseQuery() {
+    return db('employees').whereNull('deleted_at');
+  }
+
+  async getAll(options?: { search?: string; page?: number; limit?: number }) {
+    const page = Math.max(1, options?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, options?.limit ?? 10));
+    const offset = (page - 1) * limit;
+
+    const query = this.baseQuery();
+
+    if (options?.search) {
+      const term = options.search.trim();
+      if (term) {
+        if (env.DB_CLIENT === 'pg') {
+          query.where('name', 'ilike', `%${term}%`);
+        } else {
+          query.whereRaw('LOWER(name) LIKE ?', [`%${term.toLowerCase()}%`]);
+        }
+      }
+    }
+
+    const countResult = await query.clone().count<{ count: string }[]>('* as count');
+    const total = Number(countResult[0]?.count ?? 0);
+    const data = await query.clone().select('*').orderBy('id', 'desc').limit(limit).offset(offset);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getById(id: number) {
-    const employee = await db('employees').where({ id }).first();
+    const employee = await this.baseQuery().where({ id }).first();
     if (!employee) {
       throw new AppError('Employee not found', 404);
     }
@@ -44,7 +77,7 @@ export class EmployeeService {
   }
 
   async update(id: number, payload: EmployeePayload) {
-    const exists = await db('employees').where({ id }).first();
+    const exists = await this.baseQuery().where({ id }).first();
     if (!exists) {
       throw new AppError('Employee not found', 404);
     }
@@ -54,11 +87,11 @@ export class EmployeeService {
   }
 
   async delete(id: number) {
-    const exists = await db('employees').where({ id }).first();
+    const exists = await this.baseQuery().where({ id }).first();
     if (!exists) {
       throw new AppError('Employee not found', 404);
     }
-    await db('employees').where({ id }).del();
+    await db('employees').where({ id }).update({ deleted_at: db.fn.now(), updated_at: db.fn.now() });
     return { success: true };
   }
 }

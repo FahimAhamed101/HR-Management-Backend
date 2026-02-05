@@ -24,6 +24,15 @@ const options: swaggerJSDoc.Options = {
         },
       },
       schemas: {
+        RegisterRequest: {
+          type: 'object',
+          required: ['name', 'email', 'password'],
+          properties: {
+            name: { type: 'string', example: 'HR Admin' },
+            email: { type: 'string', example: 'hr@example.com' },
+            password: { type: 'string', example: 'password123' },
+          },
+        },
         LoginRequest: {
           type: 'object',
           required: ['email', 'password'],

@@ -13,7 +13,20 @@ export class AttendanceController {
     if (req.query.date) {
       filters.date = String(req.query.date);
     }
-    const records = await this.service.getAll(filters);
+    const from = req.query.from ? String(req.query.from) : undefined;
+    const to = req.query.to ? String(req.query.to) : undefined;
+    const pageRaw = req.query.page ? Number(req.query.page) : undefined;
+    const limitRaw = req.query.limit ? Number(req.query.limit) : undefined;
+    const page = Number.isFinite(pageRaw) ? pageRaw : undefined;
+    const limit = Number.isFinite(limitRaw) ? limitRaw : undefined;
+
+    const records = await this.service.getAll({
+      ...filters,
+      from,
+      to,
+      page,
+      limit,
+    });
     res.json(records);
   });
 

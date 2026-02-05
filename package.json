@@ -11,7 +11,9 @@
     "format": "prettier --write .",
     "knex:migrate": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts migrate:latest",
     "knex:rollback": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts migrate:rollback",
-    "knex:make": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts migrate:make"
+    "knex:make": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts migrate:make",
+    "knex:seed": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts seed:run",
+    "knex:seed:make": "node -r ts-node/register ./node_modules/knex/bin/cli.js --knexfile knexfile.ts seed:make"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

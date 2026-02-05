@@ -50,9 +50,12 @@ npm run dev
 See `.env.example`. Key settings:
 - `DB_CLIENT`: `pg` or `mysql2`
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `DB_POOL_MIN`, `DB_POOL_MAX`, `DB_POOL_IDLE_MS`, `DB_POOL_ACQUIRE_MS`
 - `JWT_SECRET`, `JWT_EXPIRES_IN`
 - `UPLOAD_DIR`
 - `PORT`
+Optional seed settings:
+- `SEED_HR_EMAIL`, `SEED_HR_PASSWORD`, `SEED_HR_NAME`
 
 ## Database Schema
 Tables created via migration:
@@ -96,20 +99,29 @@ const hash = await bcrypt.hash('your_password', 10);
 ## API Endpoints
 
 ### Auth
+- `POST /auth/register`
 - `POST /auth/login`
 
 ### Employees (protected)
-- `GET /employees`
+- `GET /employees` (supports `page`, `limit`, `search`)
 - `GET /employees/:id`
 - `POST /employees` (multipart/form-data, optional `photo`)
 - `PUT /employees/:id` (multipart/form-data, optional `photo`)
-- `DELETE /employees/:id`
+- `DELETE /employees/:id` (soft delete)
 
 ### Attendance (protected)
-- `GET /attendance`
-- `POST /attendance`
+- `GET /attendance` (supports `employee_id`, `date`, `from`, `to`, `page`, `limit`)
+- `POST /attendance` (upsert by `employee_id` + `date`)
 - `PUT /attendance/:id`
 - `DELETE /attendance/:id`
+
+### Reports (protected)
+- `GET /reports/attendance?month=YYYY-MM&employee_id=ID`
+
+## Query Examples
+- `GET /employees?search=rahim`
+- `GET /attendance?employee_id=12&from=2025-08-01&to=2025-08-31`
+- `GET /reports/attendance?month=2025-08`
 
 ## API Docs (Swagger)
 Open `http://localhost:PORT/docs` after starting the server.
@@ -126,6 +138,8 @@ Use `photo` field with `multipart/form-data`. Files are stored in `uploads/`.
 - `npm run knex:migrate` (run latest migrations)
 - `npm run knex:rollback` (rollback last batch)
 - `npm run knex:make -- <name>` (create new migration)
+- `npm run knex:seed` (run seeds)
+- `npm run knex:seed:make -- <name>` (create new seed)
 
 ## Notes
 - All `/employees` and `/attendance` routes require `Authorization: Bearer <token>`.

@@ -28,15 +28,47 @@ const controller = new AttendanceController();
  *         schema:
  *           type: string
  *           format: date
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
  *         description: Attendance list
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Attendance'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Attendance'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
  */
 router.get('/', controller.getAll);
 
@@ -71,7 +103,7 @@ router.get('/:id', controller.getById);
  * @openapi
  * /attendance:
  *   post:
- *     summary: Create attendance record
+ *     summary: Create or upsert attendance record
  *     tags:
  *       - Attendance
  *     security:
@@ -97,7 +129,7 @@ router.get('/:id', controller.getById);
  *                 example: "09:00"
  *     responses:
  *       201:
- *         description: Created attendance record
+ *         description: Created or updated attendance record
  *         content:
  *           application/json:
  *             schema:

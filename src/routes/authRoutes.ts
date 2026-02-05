@@ -1,10 +1,32 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middleware/validate';
-import { loginSchema } from '../validators/authValidator';
+import { loginSchema, registerSchema } from '../validators/authValidator';
 
 const router = Router();
 /**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     summary: Register HR user
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *     responses:
+ *       201:
+ *         description: Registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       409:
+ *         description: Email already registered
+ *
  * @openapi
  * /auth/login:
  *   post:
@@ -29,6 +51,7 @@ const router = Router();
  */
 const controller = new AuthController();
 
+router.post('/register', validate(registerSchema), controller.register);
 router.post('/login', validate(loginSchema), controller.login);
 
 export default router;
